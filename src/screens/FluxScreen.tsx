@@ -54,7 +54,7 @@ export const FluxScreen = () => {
   const handleShare = async (item: SavedMeme) => {
     try {
       const fullUrl = memeApi.getImageUrl(item.imageUrl);
-      const text = `Regarde ce mème créé avec MemeMaker ! 🚀\n"${item.top_text} - ${item.bottom_text}"`;
+      const text = `Regarde ce mème créé avec MemeMaker !\n"${item.top_text} - ${item.bottom_text}"`;
       await shareMeme(fullUrl, text);
     } catch (err: any) {
       console.error(err);
@@ -64,13 +64,13 @@ export const FluxScreen = () => {
 
   const getStyleLabel = (style: string = '') => {
     switch (style.toLowerCase()) {
-      case 'sarcastique': return 'Sarcastique 🙄';
-      case 'absurde': return 'Absurde 🦄';
-      case 'sombre': return 'Sombre 💀';
-      case 'geek': return 'Geek 🤓';
-      case 'audio': return 'Vocal 🎙️';
-      case 'image': return 'Photo 🎨';
-      default: return 'Général 🤪';
+      case 'sarcastique': return 'Sarcastique';
+      case 'absurde': return 'Absurde';
+      case 'sombre': return 'Sombre';
+      case 'geek': return 'Geek';
+      case 'audio': return 'Vocal';
+      case 'image': return 'Photo';
+      default: return 'Général';
     }
   };
 
@@ -79,7 +79,7 @@ export const FluxScreen = () => {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.pink} />
-          <Text style={styles.loadingText}>CHARGEMENT DU FLUX... 🔄</Text>
+          <Text style={styles.loadingText}>CHARGEMENT DU FLUX...</Text>
         </View>
       );
     }
@@ -94,9 +94,9 @@ export const FluxScreen = () => {
         >
           <View style={styles.emptyContainer}>
             <BentoBox backgroundColor={theme.colors.yellow} style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>RIEN D'INSCRIT ENCORE ! 🕳️</Text>
+              <Text style={styles.emptyTitle}>RIEN D'INSCRIT ENCORE !</Text>
               <Text style={styles.emptySub}>
-                L'historique est vide. Va sur l'accueil ou le Context Reader pour générer tes premiers mèmes puis clique sur "Sauver 💾" !
+                L'historique est vide. Va sur l'accueil ou le Context Reader pour générer tes premiers mèmes puis clique sur "Sauver" !
               </Text>
             </BentoBox>
           </View>
@@ -171,7 +171,7 @@ export const FluxScreen = () => {
                       textStyle={styles.btnText}
                     />
                     <BrutalButton
-                      title="🚀 Partager"
+                      title="Partager"
                       backgroundColor={theme.colors.yellow}
                       onPress={() => handleShare(item)}
                       style={styles.shareBtn}

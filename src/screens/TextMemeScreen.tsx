@@ -19,11 +19,11 @@ import { memeApi, GenerateTextMemeResponse } from '../api/meme.api';
 import { shareMeme } from '../utils/share';
 
 const STYLES = [
-  { id: 'humour général', label: 'Général 🤪' },
-  { id: 'sarcastique', label: 'Sarcastique 🙄' },
-  { id: 'absurde', label: 'Absurde 🦄' },
-  { id: 'sombre', label: 'Sombre 💀' },
-  { id: 'geek', label: 'Geek 🤓' },
+  { id: 'humour général', label: 'Général' },
+  { id: 'sarcastique', label: 'Sarcastique' },
+  { id: 'absurde', label: 'Absurde' },
+  { id: 'sombre', label: 'Sombre' },
+  { id: 'geek', label: 'Geek' },
 ];
 
 interface TextMemeScreenProps {
@@ -111,7 +111,7 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
     if (!imageUrl) return;
     try {
       const fullUrl = memeApi.getImageUrl(imageUrl);
-      const text = `Regarde le mème que je viens de créer avec MemeMaker ! 🚀\n"${memeData?.top_text} - ${memeData?.bottom_text}"`;
+      const text = `Regarde le mème que je viens de créer avec MemeMaker !\n"${memeData?.top_text} - ${memeData?.bottom_text}"`;
       await shareMeme(fullUrl, text);
     } catch (err: any) {
       console.error(err);
@@ -133,7 +133,7 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
         style: selectedStyle,
       });
       setIsSaved(true);
-      Alert.alert('Succès ! 🎉', 'Mème sauvegardé avec succès.');
+      Alert.alert('Succès !', 'Mème sauvegardé avec succès.');
     } catch (err: any) {
       console.error(err);
       Alert.alert('Erreur', 'Impossible de sauvegarder le mème.');
@@ -170,7 +170,7 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
         >
           {/* Main Input Box */}
           <BentoBox backgroundColor={theme.colors.white} style={styles.section}>
-            <Text style={styles.label}>Qu'est-ce qui s'est passé ? 💬</Text>
+            <Text style={styles.label}>Qu'est-ce qui s'est passé ?</Text>
             <Text style={styles.subLabel}>
               Colle un extrait de conversation, un message ou raconte ta situation en quelques mots.
             </Text>
@@ -212,7 +212,7 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
 
           {/* Generate Button */}
           <BrutalButton
-            title="GÉNÉRER LE MÈME 🚀"
+            title="GÉNÉRER LE MÈME"
             backgroundColor={theme.colors.pink}
             onPress={handleGenerateMemeText}
             disabled={isLoading || isGeneratingImage}
@@ -222,14 +222,14 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
           {/* Staggered rotating AI Loading state */}
           {isLoading && (
             <BentoBox backgroundColor={theme.colors.yellow} style={styles.loadingContainer}>
-              <BrutalAILoader message="L'IA déchiffre le contexte... 🧠" />
+              <BrutalAILoader message="L'IA déchiffre le contexte..." />
             </BentoBox>
           )}
 
           {/* Error Message */}
           {error && (
             <BentoBox backgroundColor="#FFD1D1" style={styles.errorContainer} shadowColor={theme.colors.black}>
-              <Text style={styles.errorTitle}>ERREUR ! 🛑</Text>
+              <Text style={styles.errorTitle}>ERREUR !</Text>
               <Text style={styles.errorText}>{error}</Text>
             </BentoBox>
           )}
@@ -237,7 +237,7 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
           {/* Results Box */}
           {memeData && !isLoading && (
             <BentoBox backgroundColor={theme.colors.cyan} style={styles.resultContainer}>
-              <Text style={styles.resultHeader}>MÈME SUGGÉRÉ ⚡</Text>
+              <Text style={styles.resultHeader}>MÈME SUGGÉRÉ</Text>
 
               {/* Template Suggestion */}
               <View style={styles.templateTagContainer}>
@@ -271,14 +271,14 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
                   </Text>
                   {!isGeneratingImage ? (
                     <BrutalButton
-                      title="GÉNÉRER L'IMAGE IA 🎨"
+                      title="GÉNÉRER L'IMAGE IA"
                       backgroundColor={theme.colors.pink}
                       onPress={handleGenerateMemeImage}
                       style={styles.imageBtn}
                     />
                   ) : (
                     <View style={styles.imageLoadingWrapper}>
-                      <BrutalAILoader message="L'IA peint la toile... 🎨" />
+                      <BrutalAILoader message="L'IA peint la toile..." />
                     </View>
                   )}
                 </View>
@@ -304,19 +304,19 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
                   {!isGeneratingImage ? (
                     <View style={styles.polaroidActions}>
                       <BrutalButton
-                        title="Refaire 🔄"
+                        title="Refaire"
                         backgroundColor={theme.colors.white}
                         onPress={handleGenerateMemeImage}
                         style={styles.polaroidActionBtn}
                       />
                       <BrutalButton
-                        title="Partager 🚀"
+                        title="Partager"
                         backgroundColor={theme.colors.yellow}
                         onPress={handleShareMeme}
                         style={styles.polaroidActionBtn}
                       />
                       <BrutalButton
-                        title={isSaved ? "Sauvé ✓" : "Sauver 💾"}
+                        title={isSaved ? "Sauvé" : "Sauver"}
                         backgroundColor={isSaved ? theme.colors.green : theme.colors.cyan}
                         onPress={handleSaveMeme}
                         disabled={isSaved || isSaving}
@@ -325,7 +325,7 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
                     </View>
                   ) : (
                     <View style={styles.imageLoadingWrapper}>
-                      <BrutalAILoader message="Régénération du visuel... 🎨" />
+                      <BrutalAILoader message="Régénération du visuel..." />
                     </View>
                   )}
                 </View>

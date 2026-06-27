@@ -16,7 +16,7 @@ export const MoiScreen: React.FC<MoiScreenProps> = ({ isVisible = true }) => {
   const [totalLikes, setTotalLikes] = useState<number>(0);
   const [absurdite, setAbsurdite] = useState<number>(0);
   const [rankTitle, setRankTitle] = useState("Novice");
-  const [rankEmoji, setRankEmoji] = useState("🐣");
+  const [rankEmoji, setRankEmoji] = useState("Niv.");
 
   const fetchStats = async () => {
     try {
@@ -44,16 +44,16 @@ export const MoiScreen: React.FC<MoiScreenProps> = ({ isVisible = true }) => {
         // Determine rank
         if (count === 0) {
           setRankTitle("Novice");
-          setRankEmoji("🐣");
+          setRankEmoji("Niv.");
         } else if (count <= 3) {
           setRankTitle("Créateur");
-          setRankEmoji("🎨");
+          setRankEmoji("Niv.");
         } else if (count <= 7) {
           setRankTitle("Mémologue");
-          setRankEmoji("🧠");
+          setRankEmoji("Niv.");
         } else {
           setRankTitle("Meme Lord");
-          setRankEmoji("👑");
+          setRankEmoji("Niv.");
         }
       }
     } catch (error) {
@@ -106,7 +106,7 @@ export const MoiScreen: React.FC<MoiScreenProps> = ({ isVisible = true }) => {
         >
           <View style={styles.profileHeader}>
             <View style={styles.avatarBox}>
-              <Text style={styles.avatarEmoji}>🕶️</Text>
+              <Text style={styles.avatarEmoji}>USER</Text>
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.username}>MemeLord_99</Text>

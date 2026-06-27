@@ -318,7 +318,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
     if (!voiceMemeResult) return;
     setIsGeneratingImage(true);
     try {
-      const prompt = `${voiceMemeResult.templateSuggestion} meme, funny 2D web comic style`;
+      const prompt = `${voiceMemeResult.templateSuggestion} meme, high quality realistic style`;
       const response = await memeApi.generateMemeImage(
         prompt,
         voiceMemeResult.topText,
@@ -366,7 +366,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
         style: 'audio',
       });
       setIsVoiceMemeSaved(true);
-      Alert.alert('Succès ! 🎉', 'Mème sauvegardé avec succès.');
+      Alert.alert('Succès !', 'Mème sauvegardé avec succès.');
     } catch (err: any) {
       console.error(err);
       Alert.alert('Erreur', 'Impossible de sauvegarder le mème.');
@@ -390,7 +390,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
         style: 'image',
       });
       setIsImageMemeSaved(true);
-      Alert.alert('Succès ! 🎉', 'Mème sauvegardé avec succès.');
+      Alert.alert('Succès !', 'Mème sauvegardé avec succès.');
     } catch (err: any) {
       console.error(err);
       Alert.alert('Erreur', 'Impossible de sauvegarder le mème.');
@@ -437,14 +437,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
       {isListening && (
         <View style={[styles.listeningBanner, { paddingTop: insets.top + 12 }]}>
           <Text style={styles.listeningBannerText}>
-            {listeningMode === 'permanent' ? '🎙️ ÉCOUTE PERMANENTE ACTIVÉE' : '🎙️ CAPTURE AUDIO EN COURS...'}
+            {listeningMode === 'permanent' ? 'ÉCOUTE PERMANENTE ACTIVÉE' : 'CAPTURE AUDIO EN COURS...'}
           </Text>
         </View>
       )}
 
       {isAnalyzing && (
         <View style={[styles.listeningBanner, { backgroundColor: theme.colors.yellow, paddingTop: insets.top + 12 }]}>
-          <Text style={styles.listeningBannerText}>⚡ ANALYSE DE L\'IMAGE / AUDIO...</Text>
+          <Text style={styles.listeningBannerText}>ANALYSE DE L\'IMAGE / AUDIO...</Text>
         </View>
       )}
 
@@ -461,14 +461,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
             <View style={styles.itemHeader}>
               <Text style={styles.itemTitle}>Context Reader</Text>
               <View style={styles.activeBadge}>
-                <Text style={styles.activeBadgeText}>ACTIF ⚡</Text>
+                <Text style={styles.activeBadgeText}>ACTIF</Text>
               </View>
             </View>
             <Text style={styles.itemDescription}>
-              Copie-colle un extrait de chat ou décris une situation. L\'IA trouve la punchline et génère le mème parfait !
+              Copie-colle un extrait de chat ou décris une situation. L'IA trouve la punchline et génère le mème parfait !
             </Text>
             <BrutalButton
-              title="C\'est parti ➔"
+              title="C'est parti ➔"
               backgroundColor={theme.colors.white}
               onPress={() => onNavigate('TextMeme')}
               style={styles.itemButton}
@@ -480,15 +480,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
             <View style={styles.itemHeader}>
               <Text style={styles.itemTitle}>Voice-to-Meme</Text>
               <View style={[styles.activeBadge, { backgroundColor: theme.colors.pink }]}>
-                <Text style={[styles.activeBadgeText, { color: theme.colors.white }]}>ACTIF 🎙️</Text>
+                <Text style={[styles.activeBadgeText, { color: theme.colors.white }]}>ACTIF</Text>
               </View>
             </View>
             <Text style={styles.itemDescription}>
-              Active l\'écoute permanente ou maintiens le micro magique en bas à droite pour transformer tes paroles en mème instantané !
+              Active l'écoute permanente ou maintiens le micro magique en bas à droite pour transformer tes paroles en mème instantané !
             </Text>
             {listeningMode === 'permanent' && (
               <BrutalButton
-                title="Arrêter l\'écoute"
+                title="Arrêter l'écoute"
                 backgroundColor={theme.colors.white}
                 onPress={() => {
                   setIsListening(false);
@@ -503,7 +503,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
 
         {/* Footer Credit */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>MEMEMAKER v1.0.0 • PROJET IA 🧠</Text>
         </View>
       </ScrollView>
 
@@ -627,7 +626,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
             borderTopLeftRadius={24}
             borderBottomRightRadius={24}
           >
-            <Text style={styles.modalTitle}>MÈMERIE AUDIO PROVENANT DU FUTUR 🎙️</Text>
+            <Text style={styles.modalTitle}>MÈMERIE AUDIO PROVENANT DU FUTUR</Text>
 
             <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
               <View style={styles.modalContent}>
@@ -664,13 +663,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
                 {isGeneratingImage && (
                   <View style={styles.imageLoadingBox}>
                     <ActivityIndicator size="large" color={theme.colors.pink} />
-                    <Text style={styles.loadingText}>Génération de l\'image...</Text>
+                    <Text style={styles.loadingText}>Génération de l'image...</Text>
                   </View>
                 )}
 
                 {generatedImageUrl && (
                   <View style={styles.polaroidFrame}>
-                    <Image source={{ uri: generatedImageUrl }} style={styles.polaroidImage} />
+                    <View style={styles.memeImageContainer}>
+                      <Image source={{ uri: generatedImageUrl }} style={styles.polaroidImage} />
+                      
+                      {/* Top text overlay */}
+                      {voiceMemeResult?.topText ? (
+                        <View style={styles.overlayTextContainerTop}>
+                          <Text style={styles.overlayMemeText}>{voiceMemeResult.topText}</Text>
+                        </View>
+                      ) : null}
+                      
+                      {/* Bottom text overlay */}
+                      {voiceMemeResult?.bottomText ? (
+                        <View style={styles.overlayTextContainerBottom}>
+                          <Text style={styles.overlayMemeText}>{voiceMemeResult.bottomText}</Text>
+                        </View>
+                      ) : null}
+                    </View>
                     <Text style={styles.polaroidCaption}>{voiceMemeResult?.templateSuggestion ?? 'VOICE MEME'} (POLLINATIONS.AI)</Text>
                   </View>
                 )}
@@ -689,42 +704,47 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
               {!generatedImageUrl ? (
                 <>
                   <BrutalButton
-                    title="Générer l'Image 🎨"
+                    title="Générer l'Image"
                     backgroundColor={theme.colors.yellow}
                     onPress={handleGenerateImage}
                     disabled={isGeneratingImage}
                     style={styles.modalBtn}
+                    shadowOffset={4}
                   />
                   <BrutalButton
                     title="Fermer"
                     backgroundColor={theme.colors.white}
                     onPress={handleCloseModal}
                     style={styles.modalBtn}
+                    shadowOffset={4}
                   />
                 </>
               ) : (
                 <>
                   <BrutalButton
-                    title="Partager 🚀"
+                    title="Partager"
                     backgroundColor={theme.colors.yellow}
                     onPress={() => handleShareMeme(
                       generatedImageUrl,
-                      `Regarde le mème audio que je viens de créer ! 🎙️🚀\n"${voiceMemeResult?.topText ?? ''} - ${voiceMemeResult?.bottomText ?? ''}"`
+                      `Regarde le mème audio que je viens de créer !\n"${voiceMemeResult?.topText ?? ''} - ${voiceMemeResult?.bottomText ?? ''}"`
                     )}
                     style={styles.modalBtn}
+                    shadowOffset={4}
                   />
                   <BrutalButton
-                    title={isVoiceMemeSaved ? "Sauvé ✓" : "Sauver 💾"}
+                    title={isVoiceMemeSaved ? "Sauvé" : "Sauver"}
                     backgroundColor={isVoiceMemeSaved ? theme.colors.green : theme.colors.cyan}
                     onPress={handleSaveVoiceMeme}
                     disabled={isVoiceMemeSaved || isVoiceSaving}
                     style={styles.modalBtn}
+                    shadowOffset={4}
                   />
                   <BrutalButton
                     title="Fermer"
                     backgroundColor={theme.colors.white}
                     onPress={handleCloseModal}
                     style={styles.modalBtn}
+                    shadowOffset={4}
                   />
                 </>
               )}
@@ -747,7 +767,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
             borderTopLeftRadius={24}
             borderBottomRightRadius={24}
           >
-            <Text style={styles.modalTitle}>REMIX PHOTO CRÉÉ 🎨</Text>
+            <Text style={styles.modalTitle}>REMIX PHOTO CRÉÉ</Text>
 
             <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
               <View style={styles.modalContent}>
@@ -772,7 +792,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
                         <Text style={styles.overlayMemeText}>{imageMemeResult.bottomText}</Text>
                       </View>
                     </View>
-                    <Text style={styles.polaroidCaption}>REMIX PHOTO PAR IA 🧠</Text>
+                    <Text style={styles.polaroidCaption}>REMIX PHOTO PAR IA</Text>
                   </View>
                 )}
 
@@ -805,20 +825,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
               {imageMemeResult && (
                 <>
                   <BrutalButton
-                    title="Partager 🚀"
+                    title="Partager"
                     backgroundColor={theme.colors.yellow}
                     onPress={() => handleShareMeme(
                       imageMemeResult.originalImage,
-                      `${imageMemeResult.caption}\n\nCréé avec MemeMaker 🎨🚀`
+                      `${imageMemeResult.caption}\n\nCréé avec MemeMaker`
                     )}
                     style={styles.modalBtn}
+                    shadowOffset={4}
                   />
                   <BrutalButton
-                    title={isImageMemeSaved ? "Sauvé ✓" : "Sauver 💾"}
+                    title={isImageMemeSaved ? "Sauvé" : "Sauver"}
                     backgroundColor={isImageMemeSaved ? theme.colors.green : theme.colors.cyan}
                     onPress={handleSaveImageMeme}
                     disabled={isImageMemeSaved || isImageSaving}
                     style={styles.modalBtn}
+                    shadowOffset={4}
                   />
                 </>
               )}
@@ -827,6 +849,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
                 backgroundColor={theme.colors.white}
                 onPress={() => setShowImageResultsModal(false)}
                 style={styles.modalBtn}
+                shadowOffset={4}
               />
             </View>
           </BentoBox>
