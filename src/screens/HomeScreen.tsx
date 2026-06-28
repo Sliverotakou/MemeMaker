@@ -37,6 +37,16 @@ const PlusIcon = ({ color }: { color: string }) => (
   </Svg>
 );
 
+const FILTERS = [
+  { id: 'normal', name: 'Normal', color: theme.colors.white },
+  { id: 'grayscale', name: 'N&B', color: '#e0e0e0' },
+  { id: 'sepia', name: 'Sépia', color: '#d2b48c' },
+  { id: 'invert', name: 'Négatif', color: '#333333' },
+  { id: 'blur', name: 'Flou', color: '#b0c4de' },
+  { id: 'vibrant', name: 'Vibrant', color: '#ff69b4' },
+  { id: 'cool', name: 'Froid', color: '#87ceeb' },
+];
+
 interface HomeScreenProps {
   onNavigate: (screen: string) => void;
 }
@@ -82,6 +92,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
   const [isVoiceSaving, setIsVoiceSaving] = useState(false);
   const [isImageMemeSaved, setIsImageMemeSaved] = useState(false);
   const [isImageSaving, setIsImageSaving] = useState(false);
+
+  // Filter States
+  const [selectedVoiceFilter, setSelectedVoiceFilter] = useState('normal');
+  const [selectedImageFilter, setSelectedImageFilter] = useState('normal');
+  const [displayedVoiceMemeUrl, setDisplayedVoiceMemeUrl] = useState<string | null>(null);
+  const [displayedImageMemeUrl, setDisplayedImageMemeUrl] = useState<string | null>(null);
+  const [isApplyingFilter, setIsApplyingFilter] = useState(false);
 
   // FAB Menu States
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -294,14 +311,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
         );
 
         if (res.success) {
+          const fullUrl = memeApi.getImageUrl(res.imageUrl);
           setImageMemeResult({
-            originalImage: memeApi.getImageUrl(res.imageUrl),
+            originalImage: fullUrl,
             description: res.meme.image_description,
             topText: res.meme.top_text,
             bottomText: res.meme.bottom_text,
             explanation: res.meme.explanation,
             caption: res.meme.caption,
           });
+          setDisplayedImageMemeUrl(fullUrl);
+          setSelectedImageFilter('normal');
           setShowImageResultsModal(true);
         }
       } catch (error) {
@@ -323,7 +343,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
         voiceMemeResult.bottomText,
       );
       if (response.success) {
-        setGeneratedImageUrl(memeApi.getImageUrl(response.imageUrl));
+        const fullUrl = memeApi.getImageUrl(response.imageUrl);
+        setGeneratedImageUrl(fullUrl);
+        setDisplayedVoiceMemeUrl(fullUrl);
+        setSelectedVoiceFilter('normal');
       }
     } catch (error) {
       console.error('[Voice-to-Meme Image] Erreur:', error);
@@ -335,9 +358,53 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
   const handleCloseModal = () => {
     setShowResultsModal(false);
     setGeneratedImageUrl(null);
+    setDisplayedVoiceMemeUrl(null);
+    setSelectedVoiceFilter('normal');
     setIsGeneratingImage(false);
     setIsVoiceMemeSaved(false);
     setVoiceMemeResult(null);
+  };
+
+  const handleCloseImageModal = () => {
+    setShowImageResultsModal(false);
+    setImageMemeResult(null);
+    setDisplayedImageMemeUrl(null);
+    setSelectedImageFilter('normal');
+    setIsImageMemeSaved(false);
+  };
+
+  const handleApplyVoiceFilter = async (filterType: string) => {
+    if (!generatedImageUrl) return;
+    setIsApplyingFilter(true);
+    setSelectedVoiceFilter(filterType);
+    try {
+      const res = await memeApi.applyFilter(generatedImageUrl, filterType);
+      if (res.success) {
+        setDisplayedVoiceMemeUrl(memeApi.getImageUrl(res.imageUrl));
+      }
+    } catch (err) {
+      console.error('[VoiceFilter] Erreur:', err);
+      Alert.alert('Erreur', "Impossible d'appliquer le filtre.");
+    } finally {
+      setIsApplyingFilter(false);
+    }
+  };
+
+  const handleApplyImageFilter = async (filterType: string) => {
+    if (!imageMemeResult) return;
+    setIsApplyingFilter(true);
+    setSelectedImageFilter(filterType);
+    try {
+      const res = await memeApi.applyFilter(imageMemeResult.originalImage, filterType);
+      if (res.success) {
+        setDisplayedImageMemeUrl(memeApi.getImageUrl(res.imageUrl));
+      }
+    } catch (err) {
+      console.error('[ImageFilter] Erreur:', err);
+      Alert.alert('Erreur', "Impossible d'appliquer le filtre.");
+    } finally {
+      setIsApplyingFilter(false);
+    }
   };
 
   const handleShareMeme = async (url: string, message: string) => {
@@ -350,10 +417,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
   };
 
   const handleSaveVoiceMeme = async () => {
-    if (!generatedImageUrl || !voiceMemeResult || isVoiceMemeSaved || isVoiceSaving) return;
+    const activeUrl = displayedVoiceMemeUrl || generatedImageUrl;
+    if (!activeUrl || !voiceMemeResult || isVoiceMemeSaved || isVoiceSaving) return;
     setIsVoiceSaving(true);
     try {
-      const relativeUrl = generatedImageUrl.replace(BASE_URL, '');
+      const relativeUrl = activeUrl.replace(BASE_URL, '');
       await memeApi.saveMeme({
         author: 'MemeMaker User',
         top_text: voiceMemeResult.topText,
@@ -374,10 +442,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
   };
 
   const handleSaveImageMeme = async () => {
-    if (!imageMemeResult || isImageMemeSaved || isImageSaving) return;
+    const activeUrl = displayedImageMemeUrl || (imageMemeResult && imageMemeResult.originalImage);
+    if (!imageMemeResult || !activeUrl || isImageMemeSaved || isImageSaving) return;
     setIsImageSaving(true);
     try {
-      const relativeUrl = imageMemeResult.originalImage.replace(BASE_URL, '');
+      const relativeUrl = activeUrl.replace(BASE_URL, '');
       await memeApi.saveMeme({
         author: 'MemeMaker User',
         top_text: imageMemeResult.topText,
@@ -665,26 +734,57 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
                 )}
 
                 {generatedImageUrl && (
-                  <View style={styles.polaroidFrame}>
-                    <View style={styles.memeImageContainer}>
-                      <Image source={{ uri: generatedImageUrl }} style={styles.polaroidImage} />
-                      
-                      {/* Top text overlay */}
-                      {voiceMemeResult?.topText ? (
-                        <View style={styles.overlayTextContainerTop}>
-                          <Text style={styles.overlayMemeText}>{voiceMemeResult.topText}</Text>
-                        </View>
-                      ) : null}
-                      
-                      {/* Bottom text overlay */}
-                      {voiceMemeResult?.bottomText ? (
-                        <View style={styles.overlayTextContainerBottom}>
-                          <Text style={styles.overlayMemeText}>{voiceMemeResult.bottomText}</Text>
-                        </View>
-                      ) : null}
+                  <>
+                    <View style={styles.polaroidFrame}>
+                      <View style={styles.memeImageContainer}>
+                        <Image source={{ uri: displayedVoiceMemeUrl || generatedImageUrl }} style={styles.polaroidImage} />
+                        
+                        {isApplyingFilter && (
+                          <View style={[StyleSheet.absoluteFill, styles.filterLoadingOverlay]}>
+                            <ActivityIndicator size="small" color={theme.colors.black} />
+                          </View>
+                        )}
+
+                        {/* Top text overlay */}
+                        {voiceMemeResult?.topText ? (
+                          <View style={styles.overlayTextContainerTop}>
+                            <Text style={styles.overlayMemeText}>{voiceMemeResult.topText}</Text>
+                          </View>
+                        ) : null}
+                        
+                        {/* Bottom text overlay */}
+                        {voiceMemeResult?.bottomText ? (
+                          <View style={styles.overlayTextContainerBottom}>
+                            <Text style={styles.overlayMemeText}>{voiceMemeResult.bottomText}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <Text style={styles.polaroidCaption}>{voiceMemeResult?.templateSuggestion ?? 'VOICE MEME'} (POLLINATIONS.AI)</Text>
                     </View>
-                    <Text style={styles.polaroidCaption}>{voiceMemeResult?.templateSuggestion ?? 'VOICE MEME'} (POLLINATIONS.AI)</Text>
-                  </View>
+
+                    {/* Visual Filters Carousel */}
+                    <View style={styles.filterSection}>
+                      <Text style={styles.filterSectionTitle}>EFFETS VISUELS :</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScrollView} contentContainerStyle={styles.filterScrollContent}>
+                        {FILTERS.map((f) => (
+                          <Pressable
+                            key={f.id}
+                            onPress={() => handleApplyVoiceFilter(f.id)}
+                            style={[
+                              styles.filterChip,
+                              { backgroundColor: f.color },
+                              selectedVoiceFilter === f.id && styles.filterChipSelected
+                            ]}
+                            disabled={isApplyingFilter}
+                          >
+                            <Text style={[styles.filterChipText, selectedVoiceFilter === f.id && styles.filterChipTextSelected]}>
+                              {f.name}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  </>
                 )}
 
                 {/* Explanation */}
@@ -722,7 +822,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
                     title="Partager"
                     backgroundColor={theme.colors.yellow}
                     onPress={() => handleShareMeme(
-                      generatedImageUrl,
+                      displayedVoiceMemeUrl || generatedImageUrl,
                       `Regarde le mème audio que je viens de créer !\n"${voiceMemeResult?.topText ?? ''} - ${voiceMemeResult?.bottomText ?? ''}"`
                     )}
                     style={styles.modalBtn}
@@ -755,7 +855,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
         visible={showImageResultsModal}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setShowImageResultsModal(false)}
+        onRequestClose={handleCloseImageModal}
       >
         <View style={styles.modalOverlay}>
           <BentoBox
@@ -771,26 +871,57 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
                 
                 {/* Asymmetric Polaroid Frame with Overlay Text (Meme style) */}
                 {imageMemeResult && (
-                  <View style={styles.polaroidFrame}>
-                    <View style={styles.memeImageContainer}>
-                      <Image
-                        source={{ uri: imageMemeResult.originalImage }}
-                        style={styles.polaroidImage}
-                        resizeMode="cover"
-                      />
-                      
-                      {/* Top text overlay */}
-                      <View style={styles.overlayTextContainerTop}>
-                        <Text style={styles.overlayMemeText}>{imageMemeResult.topText}</Text>
+                  <>
+                    <View style={styles.polaroidFrame}>
+                      <View style={styles.memeImageContainer}>
+                        <Image
+                          source={{ uri: displayedImageMemeUrl || imageMemeResult.originalImage }}
+                          style={styles.polaroidImage}
+                          resizeMode="cover"
+                        />
+                        
+                        {isApplyingFilter && (
+                          <View style={[StyleSheet.absoluteFill, styles.filterLoadingOverlay]}>
+                            <ActivityIndicator size="small" color={theme.colors.black} />
+                          </View>
+                        )}
+                        
+                        {/* Top text overlay */}
+                        <View style={styles.overlayTextContainerTop}>
+                          <Text style={styles.overlayMemeText}>{imageMemeResult.topText}</Text>
+                        </View>
+                        
+                        {/* Bottom text overlay */}
+                        <View style={styles.overlayTextContainerBottom}>
+                          <Text style={styles.overlayMemeText}>{imageMemeResult.bottomText}</Text>
+                        </View>
                       </View>
-                      
-                      {/* Bottom text overlay */}
-                      <View style={styles.overlayTextContainerBottom}>
-                        <Text style={styles.overlayMemeText}>{imageMemeResult.bottomText}</Text>
-                      </View>
+                      <Text style={styles.polaroidCaption}>REMIX PHOTO PAR IA</Text>
                     </View>
-                    <Text style={styles.polaroidCaption}>REMIX PHOTO PAR IA</Text>
-                  </View>
+
+                    {/* Visual Filters Carousel */}
+                    <View style={styles.filterSection}>
+                      <Text style={styles.filterSectionTitle}>EFFETS VISUELS :</Text>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScrollView} contentContainerStyle={styles.filterScrollContent}>
+                        {FILTERS.map((f) => (
+                          <Pressable
+                            key={f.id}
+                            onPress={() => handleApplyImageFilter(f.id)}
+                            style={[
+                              styles.filterChip,
+                              { backgroundColor: f.color },
+                              selectedImageFilter === f.id && styles.filterChipSelected
+                            ]}
+                            disabled={isApplyingFilter}
+                          >
+                            <Text style={[styles.filterChipText, selectedImageFilter === f.id && styles.filterChipTextSelected]}>
+                              {f.name}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  </>
                 )}
 
                 {imageMemeResult && (
@@ -803,7 +934,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
 
                     {/* Explanation */}
                     <View style={styles.resultField}>
-                      <Text style={styles.fieldLabel}>POURQUOI C\'EST DRÔLE :</Text>
+                      <Text style={styles.fieldLabel}>POURQUOI C'EST DRÔLE :</Text>
                       <Text style={styles.fieldValue}>{imageMemeResult.explanation}</Text>
                     </View>
 
@@ -825,8 +956,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
                     title="Partager"
                     backgroundColor={theme.colors.yellow}
                     onPress={() => handleShareMeme(
-                      imageMemeResult.originalImage,
-                      `${imageMemeResult.caption}\n\nCréé avec MemeMaker`
+                      displayedImageMemeUrl || imageMemeResult.originalImage,
+                      `Regarde le mème photo que je viens de créer !\n"${imageMemeResult.topText} - ${imageMemeResult.bottomText}"`
                     )}
                     style={styles.modalBtn}
                     shadowOffset={4}
@@ -844,7 +975,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
               <BrutalButton
                 title="Fermer"
                 backgroundColor={theme.colors.white}
-                onPress={() => setShowImageResultsModal(false)}
+                onPress={handleCloseImageModal}
                 style={styles.modalBtn}
                 shadowOffset={4}
               />
@@ -1214,5 +1345,56 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 1,
     elevation: 3,
+  },
+  filterSection: {
+    marginTop: 12,
+    width: '100%',
+  },
+  filterSectionTitle: {
+    fontFamily: theme.fonts.mono,
+    fontSize: 10,
+    fontWeight: '900',
+    color: theme.colors.black,
+    marginBottom: 4,
+  },
+  filterScrollView: {
+    marginVertical: 4,
+  },
+  filterScrollContent: {
+    paddingHorizontal: 2,
+    gap: 8,
+    flexDirection: 'row',
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 2,
+    borderColor: theme.colors.black,
+    borderRadius: 4,
+    backgroundColor: theme.colors.white,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 2,
+  },
+  filterChipSelected: {
+    transform: [{ translateX: 1 }, { translateY: 1 }],
+    shadowOffset: { width: 0, height: 0 },
+  },
+  filterChipText: {
+    fontSize: 11,
+    fontFamily: theme.fonts.mono,
+    fontWeight: '900',
+    color: theme.colors.black,
+  },
+  filterChipTextSelected: {
+    color: theme.colors.black,
+  },
+  filterLoadingOverlay: {
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
 });

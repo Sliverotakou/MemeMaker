@@ -121,6 +121,15 @@ export const memeApi = {
     return response.data;
   },
 
+  // Apply filter to image using sharp backend
+  applyFilter: async (imageUrl: string, filter: string): Promise<{ success: boolean; imageUrl: string }> => {
+    const response = await api.post<{ success: boolean; imageUrl: string }>('/api/meme/apply-filter', {
+      imageUrl,
+      filter,
+    });
+    return response.data;
+  },
+
   // Helper to build full image URL from relative server path
   getImageUrl: (relativeUrl: string): string => {
     if (!relativeUrl) return '';

@@ -59,5 +59,5 @@ Pour faire fonctionner cette application localement, vous devez **impérativemen
 *   **Frontend** : React Native, TypeScript
 *   **Style** : Néo-Brutalisme (Custom CSS/StyleSheets)
 *   **Audio** : `react-native-audio-recorder-player`
-*   **Backend (API)** : Node.js, Express (Voir [repo backend](https://github.com/Junior-NB/MemeMakerBackend))
+*   **Backend (API)** : Node.js, Express (Voir [repo backend](https://github.com/Junior-NB/MemeMakerBackend))-
 *   **IA** : Google Gemini (Texte & Audio), Pollinations.ai (Génération d'images)

@@ -8,6 +8,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../styles/theme';
@@ -15,7 +17,7 @@ import { BentoBox } from '../components/BentoBox';
 import { BrutalButton } from '../components/BrutalButton';
 import { BrutalInput } from '../components/BrutalInput';
 import { BrutalAILoader } from '../components/BrutalAILoader';
-import { memeApi, GenerateTextMemeResponse } from '../api/meme.api';
+import { memeApi, GenerateTextMemeResponse, BASE_URL } from '../api/meme.api';
 import { shareMeme } from '../utils/share';
 
 const STYLES = [
@@ -24,6 +26,16 @@ const STYLES = [
   { id: 'absurde', label: 'Absurde' },
   { id: 'sombre', label: 'Sombre' },
   { id: 'geek', label: 'Geek' },
+];
+
+const FILTERS = [
+  { id: 'normal', name: 'Normal', color: theme.colors.white },
+  { id: 'grayscale', name: 'N&B', color: '#e0e0e0' },
+  { id: 'sepia', name: 'Sépia', color: '#d2b48c' },
+  { id: 'invert', name: 'Négatif', color: '#333333' },
+  { id: 'blur', name: 'Flou', color: '#b0c4de' },
+  { id: 'vibrant', name: 'Vibrant', color: '#ff69b4' },
+  { id: 'cool', name: 'Froid', color: '#87ceeb' },
 ];
 
 interface TextMemeScreenProps {
@@ -43,6 +55,11 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Filter States
+  const [selectedFilter, setSelectedFilter] = useState('normal');
+  const [displayedMemeUrl, setDisplayedMemeUrl] = useState<string | null>(null);
+  const [isApplyingFilter, setIsApplyingFilter] = useState(false);
 
   const handleGenerateMemeText = async () => {
     if (!inputText.trim()) {
@@ -90,7 +107,10 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
         memeData.bottom_text
       );
       if (response.success && response.imageUrl) {
-        setImageUrl(response.imageUrl);
+        const fullUrl = response.imageUrl;
+        setImageUrl(fullUrl);
+        setDisplayedMemeUrl(memeApi.getImageUrl(fullUrl));
+        setSelectedFilter('normal');
       } else {
         setError("Erreur lors de la génération d'image.");
       }
@@ -107,12 +127,29 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
     }
   };
 
-  const handleShareMeme = async () => {
+  const handleApplyFilter = async (filterType: string) => {
     if (!imageUrl) return;
+    setIsApplyingFilter(true);
+    setSelectedFilter(filterType);
     try {
-      const fullUrl = memeApi.getImageUrl(imageUrl);
+      const res = await memeApi.applyFilter(imageUrl, filterType);
+      if (res.success) {
+        setDisplayedMemeUrl(memeApi.getImageUrl(res.imageUrl));
+      }
+    } catch (err) {
+      console.error('[TextFilter] Erreur:', err);
+      Alert.alert('Erreur', "Impossible d'appliquer le filtre.");
+    } finally {
+      setIsApplyingFilter(false);
+    }
+  };
+
+  const handleShareMeme = async () => {
+    const activeUrl = displayedMemeUrl || (imageUrl && memeApi.getImageUrl(imageUrl));
+    if (!activeUrl) return;
+    try {
       const text = `Regarde le mème que je viens de créer avec MemeMaker !\n"${memeData?.top_text} - ${memeData?.bottom_text}"`;
-      await shareMeme(fullUrl, text);
+      await shareMeme(activeUrl, text);
     } catch (err: any) {
       console.error(err);
       Alert.alert('Erreur', 'Impossible de partager le mème.');
@@ -120,14 +157,16 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
   };
 
   const handleSaveMeme = async () => {
-    if (!memeData || !imageUrl || isSaved || isSaving) return;
+    const activeUrl = displayedMemeUrl || (imageUrl && memeApi.getImageUrl(imageUrl));
+    if (!memeData || !activeUrl || isSaved || isSaving) return;
     setIsSaving(true);
     try {
+      const relativeUrl = activeUrl.replace(BASE_URL, '');
       await memeApi.saveMeme({
         author: 'MemeMaker User',
         top_text: memeData.top_text,
         bottom_text: memeData.bottom_text,
-        imageUrl: imageUrl,
+        imageUrl: relativeUrl,
         explanation: memeData.explanation,
         template_suggestion: memeData.template_suggestion,
         style: selectedStyle,
@@ -289,17 +328,47 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
                     contentStyle={styles.polaroidFrameContent}
                     style={styles.polaroidFrameOuter}
                   >
-                    <Image
-                      source={{ uri: memeApi.getImageUrl(imageUrl) }}
-                      style={styles.polaroidImage}
-                      resizeMode="cover"
-                    />
+                    <View style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+                      <Image
+                        source={{ uri: displayedMemeUrl || memeApi.getImageUrl(imageUrl) }}
+                        style={styles.polaroidImage}
+                        resizeMode="cover"
+                      />
+                      {isApplyingFilter && (
+                        <View style={[StyleSheet.absoluteFill, styles.filterLoadingOverlay]}>
+                          <ActivityIndicator size="small" color={theme.colors.black} />
+                        </View>
+                      )}
+                    </View>
                     <View style={styles.polaroidCaption}>
                       <Text style={styles.polaroidCaptionText}>
                         {memeData.template_suggestion} Remixed
                       </Text>
                     </View>
                   </BentoBox>
+
+                  {/* Visual Filters Carousel */}
+                  <View style={styles.filterSection}>
+                    <Text style={styles.filterSectionTitle}>EFFETS VISUELS :</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScrollView} contentContainerStyle={styles.filterScrollContent}>
+                      {FILTERS.map((f) => (
+                        <Pressable
+                          key={f.id}
+                          onPress={() => handleApplyFilter(f.id)}
+                          style={[
+                            styles.filterChip,
+                            { backgroundColor: f.color },
+                            selectedFilter === f.id && styles.filterChipSelected
+                          ]}
+                          disabled={isApplyingFilter}
+                        >
+                          <Text style={[styles.filterChipText, selectedFilter === f.id && styles.filterChipTextSelected]}>
+                            {f.name}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
 
                   {!isGeneratingImage ? (
                     <View style={styles.polaroidActions}>
@@ -597,5 +666,57 @@ const styles = StyleSheet.create({
   },
   polaroidActionBtn: {
     flex: 1,
+  },
+  filterSection: {
+    marginTop: 8,
+    marginBottom: 16,
+    width: '100%',
+  },
+  filterSectionTitle: {
+    fontFamily: theme.fonts.mono,
+    fontSize: 10,
+    fontWeight: '900',
+    color: theme.colors.black,
+    marginBottom: 4,
+  },
+  filterScrollView: {
+    marginVertical: 4,
+  },
+  filterScrollContent: {
+    paddingHorizontal: 2,
+    gap: 8,
+    flexDirection: 'row',
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 2,
+    borderColor: theme.colors.black,
+    borderRadius: 4,
+    backgroundColor: theme.colors.white,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 2,
+  },
+  filterChipSelected: {
+    transform: [{ translateX: 1 }, { translateY: 1 }],
+    shadowOffset: { width: 0, height: 0 },
+  },
+  filterChipText: {
+    fontSize: 11,
+    fontFamily: theme.fonts.mono,
+    fontWeight: '900',
+    color: theme.colors.black,
+  },
+  filterChipTextSelected: {
+    color: theme.colors.black,
+  },
+  filterLoadingOverlay: {
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
 });
