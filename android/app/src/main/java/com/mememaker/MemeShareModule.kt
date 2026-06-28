@@ -108,6 +108,63 @@ class MemeShareModule(reactContext: ReactApplicationContext) : ReactContextBaseJ
         }.start()
     }
 
+    @ReactMethod
+    fun shareSticker(imagePath: String, promise: Promise) {
+        val context = reactApplicationContext
+
+        Thread {
+            try {
+                val file = if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+                    val cacheDir = context.cacheDir
+                    val tempFile = File(cacheDir, "shared_sticker_${System.currentTimeMillis()}.webp")
+
+                    val urlObj = URL(imagePath)
+                    urlObj.openStream().use { input ->
+                        tempFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    tempFile
+                } else {
+                    var cleanPath = imagePath
+                    if (cleanPath.startsWith("file://")) {
+                        cleanPath = cleanPath.substring(7)
+                    }
+                    File(cleanPath)
+                }
+
+                if (!file.exists()) {
+                    promise.reject("FILE_NOT_FOUND", "Le fichier sticker n'existe pas : ${file.absolutePath}")
+                    return@Thread
+                }
+
+                // Partager avec FileProvider
+                val authority = "${context.packageName}.fileprovider"
+                val contentUri: Uri = FileProvider.getUriForFile(context, authority, file)
+
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "image/webp"
+                    putExtra(Intent.EXTRA_STREAM, contentUri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+
+                val chooserIntent = Intent.createChooser(shareIntent, "Partager mon Sticker via...")
+
+                val currentAct = reactApplicationContext.currentActivity
+                if (currentAct != null) {
+                    currentAct.startActivity(chooserIntent)
+                } else {
+                    chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(chooserIntent)
+                }
+
+                promise.resolve(true)
+            } catch (e: Exception) {
+                promise.reject("SHARE_ERROR", "Erreur lors du partage du sticker : ${e.message}", e)
+            }
+        }.start()
+    }
+
     /**
      * Dessine un texte de style mème (blanc, gras, contour noir épais) sur le canvas.
      */

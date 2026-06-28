@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, RefreshControl, ActivityIndicator, Image, Alert } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, RefreshControl, ActivityIndicator, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../styles/theme';
 import { BentoBox } from '../components/BentoBox';
 import { BrutalButton } from '../components/BrutalButton';
 import { memeApi, SavedMeme } from '../api/meme.api';
 import { shareMeme } from '../utils/share';
+import { BrutalAlert } from '../components/BrutalAlert';
 
 export const FluxScreen = () => {
   const insets = useSafeAreaInsets();
@@ -13,6 +14,18 @@ export const FluxScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [likedMemeIds, setLikedMemeIds] = useState<string[]>([]);
+
+  // Alert States
+  const [alertConfig, setAlertConfig] = useState<{ visible: boolean; title: string; message: string; type?: 'success' | 'error' | 'info' }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
+
+  const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
 
   const fetchMemes = async (showRefreshIndicator = false) => {
     if (showRefreshIndicator) {
@@ -28,7 +41,7 @@ export const FluxScreen = () => {
       }
     } catch (error) {
       console.error('Error fetching memes:', error);
-      Alert.alert('Erreur', 'Impossible de charger les mèmes.');
+      showAlert('Erreur', 'Impossible de charger les mèmes.', 'error');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -58,7 +71,7 @@ export const FluxScreen = () => {
       await shareMeme(fullUrl, text);
     } catch (err: any) {
       console.error(err);
-      Alert.alert('Erreur', 'Impossible de partager ce mème.');
+      showAlert('Erreur', 'Impossible de partager ce mème.', 'error');
     }
   };
 
@@ -194,6 +207,14 @@ export const FluxScreen = () => {
         <Text style={styles.brandTitle}>FLUX</Text>
       </View>
       {renderContent()}
+
+      <BrutalAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}
+      />
     </View>
   );
 };

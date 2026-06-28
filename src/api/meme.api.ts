@@ -130,6 +130,14 @@ export const memeApi = {
     return response.data;
   },
 
+  // Create WebP transparent sticker from generated image
+  makeSticker: async (imageUrl: string): Promise<{ success: boolean; stickerUrl: string }> => {
+    const response = await api.post<{ success: boolean; stickerUrl: string }>('/api/meme/make-sticker', {
+      imageUrl,
+    });
+    return response.data;
+  },
+
   // Helper to build full image URL from relative server path
   getImageUrl: (relativeUrl: string): string => {
     if (!relativeUrl) return '';

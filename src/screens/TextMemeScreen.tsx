@@ -5,7 +5,6 @@ import {
   View,
   ScrollView,
   Image,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -18,7 +17,8 @@ import { BrutalButton } from '../components/BrutalButton';
 import { BrutalInput } from '../components/BrutalInput';
 import { BrutalAILoader } from '../components/BrutalAILoader';
 import { memeApi, GenerateTextMemeResponse, BASE_URL } from '../api/meme.api';
-import { shareMeme } from '../utils/share';
+import { shareMeme, shareSticker } from '../utils/share';
+import { BrutalAlert } from '../components/BrutalAlert';
 
 const STYLES = [
   { id: 'humour général', label: 'Général' },
@@ -61,9 +61,24 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
   const [displayedMemeUrl, setDisplayedMemeUrl] = useState<string | null>(null);
   const [isApplyingFilter, setIsApplyingFilter] = useState(false);
 
+  // Sticker States
+  const [isStickerLoading, setIsStickerLoading] = useState(false);
+
+  // Alert States
+  const [alertConfig, setAlertConfig] = useState<{ visible: boolean; title: string; message: string; type?: 'success' | 'error' | 'info' }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
+
+  const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
+
   const handleGenerateMemeText = async () => {
     if (!inputText.trim()) {
-      Alert.alert('Oups !', "Rentre un texte ou colle une discussion pour que l'IA puisse travailler.");
+      showAlert('Oups !', "Rentre un texte ou colle une discussion pour que l'IA puisse travailler.", 'info');
       return;
     }
 
@@ -138,7 +153,7 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
       }
     } catch (err) {
       console.error('[TextFilter] Erreur:', err);
-      Alert.alert('Erreur', "Impossible d'appliquer le filtre.");
+      showAlert('Erreur', "Impossible d'appliquer le filtre.", 'error');
     } finally {
       setIsApplyingFilter(false);
     }
@@ -152,7 +167,7 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
       await shareMeme(activeUrl, text);
     } catch (err: any) {
       console.error(err);
-      Alert.alert('Erreur', 'Impossible de partager le mème.');
+      showAlert('Erreur', 'Impossible de partager le mème.', 'error');
     }
   };
 
@@ -172,12 +187,32 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
         style: selectedStyle,
       });
       setIsSaved(true);
-      Alert.alert('Succès !', 'Mème sauvegardé avec succès.');
+      showAlert('Succès !', 'Mème sauvegardé avec succès.', 'success');
     } catch (err: any) {
       console.error(err);
-      Alert.alert('Erreur', 'Impossible de sauvegarder le mème.');
+      showAlert('Erreur', 'Impossible de sauvegarder le mème.', 'error');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleShareSticker = async () => {
+    const activeUrl = displayedMemeUrl || (imageUrl && memeApi.getImageUrl(imageUrl));
+    if (!activeUrl) return;
+    setIsStickerLoading(true);
+    try {
+      const res = await memeApi.makeSticker(activeUrl);
+      if (res.success && res.stickerUrl) {
+        const fullStickerUrl = memeApi.getImageUrl(res.stickerUrl);
+        await shareSticker(fullStickerUrl);
+      } else {
+        showAlert('Erreur', 'Impossible de créer le sticker.', 'error');
+      }
+    } catch (err: any) {
+      console.error(err);
+      showAlert('Erreur', 'Impossible de créer le sticker.', 'error');
+    } finally {
+      setIsStickerLoading(false);
     }
   };
 
@@ -371,26 +406,41 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
                   </View>
 
                   {!isGeneratingImage ? (
-                    <View style={styles.polaroidActions}>
-                      <BrutalButton
-                        title="Refaire"
-                        backgroundColor={theme.colors.white}
-                        onPress={handleGenerateMemeImage}
-                        style={styles.polaroidActionBtn}
-                      />
-                      <BrutalButton
-                        title="Partager"
-                        backgroundColor={theme.colors.yellow}
-                        onPress={handleShareMeme}
-                        style={styles.polaroidActionBtn}
-                      />
-                      <BrutalButton
-                        title={isSaved ? "Sauvé" : "Sauver"}
-                        backgroundColor={isSaved ? theme.colors.green : theme.colors.cyan}
-                        onPress={handleSaveMeme}
-                        disabled={isSaved || isSaving}
-                        style={styles.polaroidActionBtn}
-                      />
+                    <View style={{ width: '100%', gap: 10 }}>
+                      <View style={styles.polaroidActions}>
+                        <BrutalButton
+                          title="Refaire"
+                          backgroundColor={theme.colors.white}
+                          onPress={handleGenerateMemeImage}
+                          style={styles.polaroidActionBtn}
+                          shadowOffset={3}
+                        />
+                        <BrutalButton
+                          title="Partager"
+                          backgroundColor={theme.colors.yellow}
+                          onPress={handleShareMeme}
+                          style={styles.polaroidActionBtn}
+                          shadowOffset={3}
+                        />
+                        <BrutalButton
+                          title={isStickerLoading ? "Sticker..." : "Sticker"}
+                          backgroundColor={theme.colors.pink}
+                          onPress={handleShareSticker}
+                          disabled={isStickerLoading}
+                          style={styles.polaroidActionBtn}
+                          shadowOffset={3}
+                        />
+                      </View>
+                      <View style={styles.polaroidActions}>
+                        <BrutalButton
+                          title={isSaved ? "MÈME SAUVÉ EN BASE" : "SAUVEGARDER LE MÈME"}
+                          backgroundColor={isSaved ? theme.colors.green : theme.colors.cyan}
+                          onPress={handleSaveMeme}
+                          disabled={isSaved || isSaving}
+                          style={{ flex: 1 }}
+                          shadowOffset={3}
+                        />
+                      </View>
                     </View>
                   ) : (
                     <View style={styles.imageLoadingWrapper}>
@@ -403,6 +453,13 @@ export const TextMemeScreen: React.FC<TextMemeScreenProps> = ({ onBack }) => {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+      <BrutalAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}
+      />
     </View>
   );
 };

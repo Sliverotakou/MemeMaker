@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, Animated, Pressable, Modal, ActivityIndicator, Image, Alert } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Animated, Pressable, Modal, ActivityIndicator, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -7,8 +7,9 @@ import { theme } from '../styles/theme';
 import { BentoBox } from '../components/BentoBox';
 import { BrutalButton } from '../components/BrutalButton';
 import { memeApi, BASE_URL } from '../api/meme.api';
-import { shareMeme } from '../utils/share';
+import { shareMeme, shareSticker } from '../utils/share';
 import { startRecording, stopRecording, cleanupRecorder } from '../utils/audioRecorder';
+import { BrutalAlert } from '../components/BrutalAlert';
 
 // Custom Microphone Icon in SVG
 const MicIcon = ({ color }: { color: string }) => (
@@ -99,6 +100,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
   const [displayedVoiceMemeUrl, setDisplayedVoiceMemeUrl] = useState<string | null>(null);
   const [displayedImageMemeUrl, setDisplayedImageMemeUrl] = useState<string | null>(null);
   const [isApplyingFilter, setIsApplyingFilter] = useState(false);
+
+  // Sticker States
+  const [isVoiceStickerLoading, setIsVoiceStickerLoading] = useState(false);
+  const [isImageStickerLoading, setIsImageStickerLoading] = useState(false);
+
+  // Alert States
+  const [alertConfig, setAlertConfig] = useState<{ visible: boolean; title: string; message: string; type?: 'success' | 'error' | 'info' }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
+
+  const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
 
   // FAB Menu States
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -199,9 +216,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
     } catch (err: any) {
       console.error('[HomeScreen] Failed to start recording:', err);
       if (err.message === 'RECORD_AUDIO permission denied') {
-        Alert.alert(
+        showAlert(
           'Permission refusée',
           "MemeMaker a besoin du microphone pour la fonction Voice-to-Meme. Active la permission dans les paramètres.",
+          'error'
         );
       }
       setIsListening(false);
@@ -238,11 +256,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
         });
         setShowResultsModal(true);
       } else {
-        Alert.alert('Erreur', "L'analyse audio n'a pas retourné de résultats.");
+        showAlert('Erreur', "L'analyse audio n'a pas retourné de résultats.", 'error');
       }
     } catch (error: any) {
       console.error('[HomeScreen] Audio analysis error:', error);
-      Alert.alert('Erreur', "Impossible d'analyser l'audio. Vérifie la connexion au serveur.");
+      showAlert('Erreur', "Impossible d'analyser l'audio. Vérifie la connexion au serveur.", 'error');
     } finally {
       setIsAnalyzing(false);
     }
@@ -384,7 +402,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
       }
     } catch (err) {
       console.error('[VoiceFilter] Erreur:', err);
-      Alert.alert('Erreur', "Impossible d'appliquer le filtre.");
+      showAlert('Erreur', "Impossible d'appliquer le filtre.", 'error');
     } finally {
       setIsApplyingFilter(false);
     }
@@ -401,7 +419,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
       }
     } catch (err) {
       console.error('[ImageFilter] Erreur:', err);
-      Alert.alert('Erreur', "Impossible d'appliquer le filtre.");
+      showAlert('Erreur', "Impossible d'appliquer le filtre.", 'error');
     } finally {
       setIsApplyingFilter(false);
     }
@@ -412,7 +430,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
       await shareMeme(url, message);
     } catch (err: any) {
       console.error(err);
-      Alert.alert('Erreur', 'Impossible de partager le mème.');
+      showAlert('Erreur', 'Impossible de partager le mème.', 'error');
     }
   };
 
@@ -432,10 +450,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
         style: 'audio',
       });
       setIsVoiceMemeSaved(true);
-      Alert.alert('Succès !', 'Mème sauvegardé avec succès.');
+      showAlert('Succès !', 'Mème sauvegardé avec succès.', 'success');
     } catch (err: any) {
       console.error(err);
-      Alert.alert('Erreur', 'Impossible de sauvegarder le mème.');
+      showAlert('Erreur', 'Impossible de sauvegarder le mème.', 'error');
     } finally {
       setIsVoiceSaving(false);
     }
@@ -457,12 +475,52 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
         style: 'image',
       });
       setIsImageMemeSaved(true);
-      Alert.alert('Succès !', 'Mème sauvegardé avec succès.');
+      showAlert('Succès !', 'Mème sauvegardé avec succès.', 'success');
     } catch (err: any) {
       console.error(err);
-      Alert.alert('Erreur', 'Impossible de sauvegarder le mème.');
+      showAlert('Erreur', 'Impossible de sauvegarder le mème.', 'error');
     } finally {
       setIsImageSaving(false);
+    }
+  };
+
+  const handleShareVoiceSticker = async () => {
+    const activeUrl = displayedVoiceMemeUrl || (generatedImageUrl && memeApi.getImageUrl(generatedImageUrl));
+    if (!activeUrl) return;
+    setIsVoiceStickerLoading(true);
+    try {
+      const res = await memeApi.makeSticker(activeUrl);
+      if (res.success && res.stickerUrl) {
+        const fullStickerUrl = memeApi.getImageUrl(res.stickerUrl);
+        await shareSticker(fullStickerUrl);
+      } else {
+        showAlert('Erreur', 'Impossible de créer le sticker.', 'error');
+      }
+    } catch (err: any) {
+      console.error(err);
+      showAlert('Erreur', 'Impossible de créer le sticker.', 'error');
+    } finally {
+      setIsVoiceStickerLoading(false);
+    }
+  };
+
+  const handleShareImageSticker = async () => {
+    const activeUrl = displayedImageMemeUrl || (imageMemeResult && imageMemeResult.originalImage);
+    if (!activeUrl) return;
+    setIsImageStickerLoading(true);
+    try {
+      const res = await memeApi.makeSticker(activeUrl);
+      if (res.success && res.stickerUrl) {
+        const fullStickerUrl = memeApi.getImageUrl(res.stickerUrl);
+        await shareSticker(fullStickerUrl);
+      } else {
+        showAlert('Erreur', 'Impossible de créer le sticker.', 'error');
+      }
+    } catch (err: any) {
+      console.error(err);
+      showAlert('Erreur', 'Impossible de créer le sticker.', 'error');
+    } finally {
+      setIsImageStickerLoading(false);
     }
   };
 
@@ -797,27 +855,27 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
             </ScrollView>
 
             {/* Modal Actions */}
-            <View style={styles.modalActions}>
-              {!generatedImageUrl ? (
-                <>
-                  <BrutalButton
-                    title="Générer l'Image"
-                    backgroundColor={theme.colors.yellow}
-                    onPress={handleGenerateImage}
-                    disabled={isGeneratingImage}
-                    style={styles.modalBtn}
-                    shadowOffset={4}
-                  />
-                  <BrutalButton
-                    title="Fermer"
-                    backgroundColor={theme.colors.white}
-                    onPress={handleCloseModal}
-                    style={styles.modalBtn}
-                    shadowOffset={4}
-                  />
-                </>
-              ) : (
-                <>
+            {!generatedImageUrl ? (
+              <View style={styles.modalActions}>
+                <BrutalButton
+                  title="Générer l'Image"
+                  backgroundColor={theme.colors.yellow}
+                  onPress={handleGenerateImage}
+                  disabled={isGeneratingImage}
+                  style={styles.modalBtn}
+                  shadowOffset={4}
+                />
+                <BrutalButton
+                  title="Fermer"
+                  backgroundColor={theme.colors.white}
+                  onPress={handleCloseModal}
+                  style={styles.modalBtn}
+                  shadowOffset={4}
+                />
+              </View>
+            ) : (
+              <View style={{ width: '100%', gap: 10 }}>
+                <View style={styles.modalActions}>
                   <BrutalButton
                     title="Partager"
                     backgroundColor={theme.colors.yellow}
@@ -829,6 +887,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
                     shadowOffset={4}
                   />
                   <BrutalButton
+                    title={isVoiceStickerLoading ? "Sticker..." : "Sticker"}
+                    backgroundColor={theme.colors.pink}
+                    onPress={handleShareVoiceSticker}
+                    disabled={isVoiceStickerLoading}
+                    style={styles.modalBtn}
+                    shadowOffset={4}
+                  />
+                  <BrutalButton
                     title={isVoiceMemeSaved ? "Sauvé" : "Sauver"}
                     backgroundColor={isVoiceMemeSaved ? theme.colors.green : theme.colors.cyan}
                     onPress={handleSaveVoiceMeme}
@@ -836,16 +902,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
                     style={styles.modalBtn}
                     shadowOffset={4}
                   />
+                </View>
+                <View style={styles.modalActions}>
                   <BrutalButton
                     title="Fermer"
                     backgroundColor={theme.colors.white}
                     onPress={handleCloseModal}
-                    style={styles.modalBtn}
+                    style={{ flex: 1 }}
                     shadowOffset={4}
                   />
-                </>
-              )}
-            </View>
+                </View>
+              </View>
+            )}
           </BentoBox>
         </View>
       </Modal>
@@ -949,9 +1017,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
             </ScrollView>
 
             {/* Modal Actions */}
-            <View style={styles.modalActions}>
+            <View style={{ width: '100%', gap: 10 }}>
               {imageMemeResult && (
-                <>
+                <View style={styles.modalActions}>
                   <BrutalButton
                     title="Partager"
                     backgroundColor={theme.colors.yellow}
@@ -963,6 +1031,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
                     shadowOffset={4}
                   />
                   <BrutalButton
+                    title={isImageStickerLoading ? "Sticker..." : "Sticker"}
+                    backgroundColor={theme.colors.pink}
+                    onPress={handleShareImageSticker}
+                    disabled={isImageStickerLoading}
+                    style={styles.modalBtn}
+                    shadowOffset={4}
+                  />
+                  <BrutalButton
                     title={isImageMemeSaved ? "Sauvé" : "Sauver"}
                     backgroundColor={isImageMemeSaved ? theme.colors.green : theme.colors.cyan}
                     onPress={handleSaveImageMeme}
@@ -970,19 +1046,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
                     style={styles.modalBtn}
                     shadowOffset={4}
                   />
-                </>
+                </View>
               )}
-              <BrutalButton
-                title="Fermer"
-                backgroundColor={theme.colors.white}
-                onPress={handleCloseImageModal}
-                style={styles.modalBtn}
-                shadowOffset={4}
-              />
+              <View style={styles.modalActions}>
+                <BrutalButton
+                  title="Fermer"
+                  backgroundColor={theme.colors.white}
+                  onPress={handleCloseImageModal}
+                  style={{ flex: 1 }}
+                  shadowOffset={4}
+                />
+              </View>
             </View>
           </BentoBox>
         </View>
       </Modal>
+
+      <BrutalAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}
+      />
     </View>
   );
 };
