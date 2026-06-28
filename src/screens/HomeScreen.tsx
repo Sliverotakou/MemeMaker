@@ -234,6 +234,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
   // Hold-to-Talk and Tap-to-Toggle STT Triggers
   const handlePressIn = () => {
     pressStartTime.current = Date.now();
+    
+    // Si on est déjà en écoute permanente, on ignore pour ne pas écraser l'enregistrement
+    if (listeningMode === 'permanent') {
+      return;
+    }
+
     setIsListening(true);
     setListeningMode('hold');
     beginRecording();
@@ -263,14 +269,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
     }
   };
 
-  const handleSTTAction = () => {
-    // Close menu first
-    toggleMenu();
-    // Toggle permanent listening + start recording
-    setIsListening(true);
-    setListeningMode('permanent');
-    beginRecording();
-  };
 
   // Select image and upload to server for analysis
   const handleSelectImage = () => {
@@ -577,7 +575,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
           <View style={styles.subFabShadow} />
           <Pressable
             style={[styles.subFab, { backgroundColor: theme.colors.yellow }]}
-            onPress={handleSTTAction}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
           >
